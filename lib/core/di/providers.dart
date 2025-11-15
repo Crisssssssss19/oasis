@@ -27,6 +27,13 @@ import "package:oasis/domain/usecase/chat_caso_uso.dart";
 
 import "package:oasis/core/util/websocket_service.dart";
 
+// PROVIDERS DE VACANTES EMPRESA
+
+import 'package:oasis/data/remote/vacante_empresa_api.dart';
+import 'package:oasis/data/repository/vacante_empresa_repositorio_impl.dart';
+import 'package:oasis/domain/repository/vacante_empresa_repository.dart';
+import 'package:oasis/domain/usecase/vacante_empresa_caso_uso.dart';
+
 final dioProvider = Provider<Dio>((ref) {
   final options = BaseOptions(
     // 🔴 PRODUCCIÓN: Backend del profesor
@@ -250,4 +257,27 @@ final webSocketServiceProvider = Provider<WebSocketService>((ref) {
   final session = ref.watch(sessionProvider);
 
   return WebSocketService(baseUrl: fullWsUrl, token: session.token);
+});
+/// Provider de VacanteEmpresaApi
+final vacanteEmpresaApiProvider = Provider<VacanteEmpresaApi>((ref) {
+  final dio = ref.watch(dioProvider);
+  return VacanteEmpresaApi(dio);
+});
+
+/// Provider de VacanteEmpresaRepositorio
+final vacanteEmpresaRepositoryProvider = Provider<VacanteEmpresaRepositorio>((ref) {
+  final api = ref.watch(vacanteEmpresaApiProvider);
+  return VacanteEmpresaRepositorioImpl(api);
+});
+
+/// Provider de ObtenerVacantesEmpresaCasoUso
+final obtenerVacantesEmpresaUseCaseProvider = Provider<ObtenerVacantesEmpresaCasoUso>((ref) {
+  final repo = ref.watch(vacanteEmpresaRepositoryProvider);
+  return ObtenerVacantesEmpresaCasoUso(repo);
+});
+
+/// Provider de CrearVacanteCasoUso
+final crearVacanteUseCaseProvider = Provider<CrearVacanteCasoUso>((ref) {
+  final repo = ref.watch(vacanteEmpresaRepositoryProvider);
+  return CrearVacanteCasoUso(repo);
 });

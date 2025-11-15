@@ -13,6 +13,7 @@ import 'package:oasis/presentation/aspirante/registro/paso3/registro_paso3_scree
 import 'package:oasis/presentation/aspirante/registro/paso2/registro_paso2_screen.dart';
 import 'package:oasis/presentation/bienvenida/bienvenida_screen.dart';
 import 'package:oasis/presentation/animacion/animacion_screen.dart';
+import 'package:oasis/presentation/empresa/vacante/empresa_crear_vacante_screen.dart';
 import 'package:oasis/presentation/registro/registro_inicio_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_test_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_screen.dart';
@@ -83,8 +84,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/asp_reg_paso2',
       name: 'asp_reg_paso2',
-      pageBuilder: (context, state) =>
-          NoTransitionPage(key: state.pageKey, child: const RegistroPaso2Screen()),
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: const RegistroPaso2Screen(),
+      ),
     ),
 
     GoRoute(
@@ -138,17 +141,15 @@ final appRouter = GoRouter(
     ),
 
     // ========== RUTAS DE CHAT ==========
-    
+
     /// Pantalla de prueba para ingresar parámetros de chat
     /// Ruta: /chat-test
     /// Parámetros: userId (requerido), empresaId (opcional), vacanteId (opcional)
     GoRoute(
       path: '/chat-test',
       name: 'chat_test',
-      pageBuilder: (context, state) => NoTransitionPage(
-        key: state.pageKey,
-        child: const ChatTestScreen(),
-      ),
+      pageBuilder: (context, state) =>
+          NoTransitionPage(key: state.pageKey, child: const ChatTestScreen()),
     ),
 
     /// Pantalla principal de chat (Lista de todos los chats)
@@ -157,10 +158,8 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/chat',
       name: 'chat',
-      pageBuilder: (context, state) => NoTransitionPage(
-        key: state.pageKey,
-        child: const ChatScreen(),
-      ),
+      pageBuilder: (context, state) =>
+          NoTransitionPage(key: state.pageKey, child: const ChatScreen()),
     ),
 
     /// Pantalla de conversación individual
@@ -175,7 +174,7 @@ final appRouter = GoRouter(
         final extra = state.extra as Map<String, dynamic>?;
         final vacanteTitulo = extra?['vacanteTitulo'] as String? ?? 'Chat';
         final contraparteNombre = extra?['contraparteNombre'] as String? ?? '';
-        
+
         return NoTransitionPage(
           key: state.pageKey,
           child: ChatConversacionScreen(
@@ -185,6 +184,28 @@ final appRouter = GoRouter(
           ),
         );
       },
+    ),
+    
+    // ========== RUTAS DE EMPRESA ==========
+
+    /// Pantalla de vacantes de la empresa
+    GoRoute(
+      path: '/empresa/vacantes',
+      name: 'empresa_vacantes',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: const EmpresaCrearVacanteScreen(),
+      ),
+    ),
+
+    /// Pantalla para crear nueva vacante
+    GoRoute(
+      path: '/empresa/crear-vacante',
+      name: 'empresa_crear_vacante',
+      pageBuilder: (context, state) => NoTransitionPage(
+        key: state.pageKey,
+        child: const EmpresaCrearVacanteScreen(),
+      ),
     ),
   ],
 );
