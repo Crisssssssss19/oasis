@@ -14,7 +14,10 @@ import 'package:oasis/presentation/aspirante/registro/paso2/registro_paso2_scree
 import 'package:oasis/presentation/bienvenida/bienvenida_screen.dart';
 import 'package:oasis/presentation/animacion/animacion_screen.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_crear_vacante_screen.dart';
+<<<<<<< HEAD
 import 'package:oasis/presentation/empresa/vacante/empresa_vacantes_screen.dart';
+=======
+>>>>>>> a6c9b3b5bba2e95003113e7460c3ea5b4a6cb51c
 import 'package:oasis/presentation/registro/registro_inicio_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_test_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_screen.dart';
@@ -195,7 +198,11 @@ final appRouter = GoRouter(
       name: 'empresa_vacantes',
       pageBuilder: (context, state) => NoTransitionPage(
         key: state.pageKey,
+<<<<<<< HEAD
         child: const EmpresaVacantesScreen(),
+=======
+        child: const EmpresaCrearVacanteScreen(),
+>>>>>>> a6c9b3b5bba2e95003113e7460c3ea5b4a6cb51c
       ),
     ),
 
