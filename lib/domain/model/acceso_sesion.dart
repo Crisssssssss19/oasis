@@ -4,6 +4,7 @@ class AccesoSesion {
   final int? expiraEn;
   final int? userId;
   final int? empresaId;
+  final List<String> roles; // <-- Nunca null
 
   const AccesoSesion({
     this.token,
@@ -11,6 +12,7 @@ class AccesoSesion {
     this.expiraEn,
     this.userId,
     this.empresaId,
+    this.roles = const [], // <-- Valor por defecto
   });
 
   bool get isLoggedIn => token != null;
@@ -27,6 +29,7 @@ class AccesoSesion {
     int? expiraEn,
     int? userId,
     int? empresaId,
+    List<String>? roles,
   }) {
     return AccesoSesion(
       token: token ?? this.token,
@@ -34,6 +37,7 @@ class AccesoSesion {
       expiraEn: expiraEn ?? this.expiraEn,
       userId: userId ?? this.userId,
       empresaId: empresaId ?? this.empresaId,
+      roles: roles ?? this.roles, // <-- Siempre lista válida
     );
   }
 }

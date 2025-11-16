@@ -8,6 +8,8 @@ class SesionNotifier extends StateNotifier<AccesoSesion> {
   static const _expiraKey = "swallow_expira_en";
   static const _userIdKey = "swallow_user_id";
   static const _empresaIdKey = "swallow_empresa_id";
+  static const String _rolesKey = "roles";
+
 
   /// Constructor principal: recibe un estado inicial
   SesionNotifier([super.initial = const AccesoSesion()]);
@@ -24,47 +26,55 @@ class SesionNotifier extends StateNotifier<AccesoSesion> {
     );
   }
 
-  /// Guardar sesión
-  Future<void> saveSession(
-    String token,
-    String imageBase64,
-    int expiraEn, {
-    int? userId,
-    int? empresaId,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
-    await prefs.setString(_imageKey, imageBase64);
-    await prefs.setInt(_expiraKey, expiraEn);
-    
-    // Guardar userId y empresaId si están disponibles
-    if (userId != null) {
-      await prefs.setInt(_userIdKey, userId);
-    }
-    if (empresaId != null) {
-      await prefs.setInt(_empresaIdKey, empresaId);
-    }
+ /// Guardar sesión
+Future<void> saveSession(
+  String token,
+  String imageBase64,
+  int expiraEn, {
+  int? userId,
+  int? empresaId,
+  List<String> roles = const [], // <-- AÑADIDO
+}) async {
+  final prefs = await SharedPreferences.getInstance();
 
-    state = AccesoSesion(
-      token: token,
-      imageBase64: imageBase64,
-      expiraEn: expiraEn,
-      userId: userId,
-      empresaId: empresaId,
-    );
+  await prefs.setString(_tokenKey, token);
+  await prefs.setString(_imageKey, imageBase64);
+  await prefs.setInt(_expiraKey, expiraEn);
+
+  // Guardar userId y empresaId
+  if (userId != null) {
+    await prefs.setInt(_userIdKey, userId);
+  }
+  if (empresaId != null) {
+    await prefs.setInt(_empresaIdKey, empresaId);
   }
 
-  /// Limpiar sesión
-  Future<void> clearSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_imageKey);
-    await prefs.remove(_expiraKey);
-    await prefs.remove(_userIdKey);
-    await prefs.remove(_empresaIdKey);
+  // Guardar roles
+  await prefs.setStringList(_rolesKey, roles); // <-- AÑADIDO
 
-    state = const AccesoSesion();
-  }
+  state = AccesoSesion(
+    token: token,
+    imageBase64: imageBase64,
+    expiraEn: expiraEn,
+    userId: userId,
+    empresaId: empresaId,
+    roles: roles, // <-- AÑADIDO
+  );
+}
+
+/// Limpiar sesión
+Future<void> clearSession() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  await prefs.remove(_tokenKey);
+  await prefs.remove(_imageKey);
+  await prefs.remove(_expiraKey);
+  await prefs.remove(_userIdKey);
+  await prefs.remove(_empresaIdKey);
+  await prefs.remove(_rolesKey); // <-- AÑADIDO
+
+  state = const AccesoSesion();
+}
 }
 
 

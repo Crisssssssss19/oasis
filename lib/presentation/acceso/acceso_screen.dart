@@ -137,6 +137,7 @@ class _AccesoScreenState extends ConsumerState<AccesoScreen> {
                               // Obtener sesión y navegar según tipo de usuario
                               final session = ref.read(sessionProvider);
                               final rutaInicio = UserRoleHelper.getRutaInicio(session);
+                              print("ruta inicio: $rutaInicio");
                               context.go(rutaInicio);
                             } else {
                               showTopSnackBar(
