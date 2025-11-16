@@ -29,7 +29,7 @@ class BotonesRegistro extends StatelessWidget {
         const SizedBox(height: 16),
         BotonDegradee(
           text: "Soy empresa",
-          onClick: () => context.push('/registro_empresa'),
+          onClick: () => context.push('/empresa/vacantes'),
           gradiente: isDark
               ? [
             temaOscuroBotonGradienteAmarilloInicio,
