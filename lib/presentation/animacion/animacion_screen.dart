@@ -3,6 +3,7 @@ import 'package:lottie/lottie.dart';
 import 'package:oasis/core/theme/colores_bienvenida.dart';
 import 'package:oasis/core/theme/tema_bienvenida.dart';
 import 'package:oasis/core/ui/logo_principal.dart';
+import 'package:oasis/core/util/user_role_helper.dart'; // 👈 NUEVO
 
 class AnimacionScreen extends StatefulWidget {
   final VoidCallback onAnimacionTerminada;

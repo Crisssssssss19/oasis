@@ -37,32 +37,32 @@ class AccesoNotifier extends StateNotifier<AccesoState> {
   }
 
   Future<AccesoRespuesta> login() async {
-    state = state.copyWith(loading: true);
+  state = state.copyWith(loading: true);
 
-    final result = await accesoCasoUso(state.email, state.password);
+  final result = await accesoCasoUso(state.email, state.password);
 
-    state = state.copyWith(loading: false);
+  state = state.copyWith(loading: false);
 
-    if (result.success && result.token != null) {
-      // Decodificar el token JWT para extraer userId y empresaId
-      final payload = decodeJwtPayload(result.token!);
-      final userId = payload?["userId"] as int?;
-      final empresaId = payload?["empresaId"] as int?;
-      
-      // Guardar sesión con userId y empresaId
-      await ref.read(sessionProvider.notifier).saveSession(
-        result.token!,
-        result.profileImage != null ? base64Encode(result.profileImage!) : "",
-        result.expiresAt ?? 0,
-        userId: userId,
-        empresaId: empresaId,
-      );
-    } else {
-      state = state.copyWith(email: state.email, password: "");
-    }
-
-    return result;
+  if (result.success && result.token != null) {
+    // Decodificar el token JWT para extraer userId y empresaId
+    final payload = decodeJwtPayload(result.token!);
+    final userId = payload?["userId"] as int?;
+    final empresaId = payload?["empresaId"] as int?;
+    
+    // Guardar sesión con userId y empresaId
+    await ref.read(sessionProvider.notifier).saveSession(
+      result.token!,
+      result.profileImage != null ? base64Encode(result.profileImage!) : "",
+      result.expiresAt ?? 0,
+      userId: userId,
+      empresaId: empresaId,
+    );
+  } else {
+    state = state.copyWith(email: state.email, password: "");
   }
+
+  return result;
+}
 
   bool _validarCamposInternal() {
     bool valid = true;

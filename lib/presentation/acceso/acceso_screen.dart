@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:oasis/core/di/providers.dart';
 import 'package:oasis/core/theme/colores_bienvenida.dart';
 import 'package:oasis/core/theme/tema_bienvenida.dart';
 import 'package:oasis/core/ui/barra_superior.dart';
 import 'package:oasis/core/ui/logo_principal.dart';
+import 'package:oasis/core/util/user_role_helper.dart';
 import 'package:oasis/presentation/acceso/acceso_provider.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
@@ -92,7 +95,7 @@ class _AccesoScreenState extends ConsumerState<AccesoScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // --- Campo de correo ---
+                  // Campo de correo
                   TextFormField(
                     decoration: InputDecoration(
                       labelText: "Correo electrónico",
@@ -106,7 +109,7 @@ class _AccesoScreenState extends ConsumerState<AccesoScreen> {
 
                   const SizedBox(height: 12),
 
-                  // --- Campo de contraseña ---
+                  // Campo de contraseña
                   TextFormField(
                     controller: passwordController,
                     decoration: InputDecoration(
@@ -118,7 +121,7 @@ class _AccesoScreenState extends ConsumerState<AccesoScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // --- Botón con gradiente ---
+                  // Botón con gradiente
                   ElevatedButton(
                     onPressed: state.loading
                         ? null
@@ -129,7 +132,12 @@ class _AccesoScreenState extends ConsumerState<AccesoScreen> {
                             final result = await notifier.login();
 
                             if (result.success) {
-                              widget.onAccesoExitoso();
+                              if (!mounted) return;
+                              
+                              // Obtener sesión y navegar según tipo de usuario
+                              final session = ref.read(sessionProvider);
+                              final rutaInicio = UserRoleHelper.getRutaInicio(session);
+                              context.go(rutaInicio);
                             } else {
                               showTopSnackBar(
                                 overlay,

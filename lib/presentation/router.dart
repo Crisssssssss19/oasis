@@ -19,10 +19,11 @@ import 'package:oasis/presentation/registro/registro_inicio_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_test_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_conversacion_screen.dart';
+import 'package:oasis/core/util/user_role_helper.dart';
 
 class NoTransitionPage<T> extends CustomTransitionPage<T> {
   NoTransitionPage({super.key, required super.child})
-      : super(transitionsBuilder: (_, _, _, child) => child);
+    : super(transitionsBuilder: (_, _, _, child) => child);
 }
 
 final appRouter = GoRouter(
@@ -37,8 +38,11 @@ final appRouter = GoRouter(
           onAnimacionTerminada: () async {
             final container = ProviderScope.containerOf(context);
             final session = container.read(sessionProvider);
+
             if (session.isLoggedIn && !session.isExpired) {
-              context.go('/inicio');
+              // Redirigir según tipo de usuario
+              final rutaInicio = UserRoleHelper.getRutaInicio(session);
+              context.go(rutaInicio);
             } else {
               context.go('/bienvenida');
             }
