@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:oasis/core/ui/barra_superior.dart';
+import 'package:oasis/core/theme/colores_bienvenida.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_provider.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_state.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
@@ -88,22 +89,21 @@ class _EmpresaCrearVacanteScreenState
     }
   }
 
+  void _eliminarImagen() {
+    setState(() {
+      _imagenSeleccionada = null;
+    });
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
-    if (_imagenSeleccionada == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Debes seleccionar una imagen")),
-      );
-      return;
-    }
 
     if (_ubicacionId == null ||
         _jornadaId == null ||
         _modalidadId == null ||
         _tipoContratoId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Completa todos los campos")),
+        const SnackBar(content: Text("Completa todos los campos requeridos")),
       );
       return;
     }
@@ -116,6 +116,9 @@ class _EmpresaCrearVacanteScreenState
         .where((e) => e.isNotEmpty)
         .toList();
 
+    // Si no hay imagen seleccionada, crear un archivo vacío o usar una por defecto
+    final imagenArchivo = _imagenSeleccionada ?? await _crearImagenPorDefecto();
+
     await ref.read(empresaVacanteProvider.notifier).crearVacante(
           titulo: _tituloController.text,
           descripcion: _descripcionController.text,
@@ -126,18 +129,36 @@ class _EmpresaCrearVacanteScreenState
           modalidadId: _modalidadId!,
           tipoContratoId: _tipoContratoId!,
           palabrasClave: palabrasClave,
-          imagenArchivo: _imagenSeleccionada!,
+          imagenArchivo: imagenArchivo,
         );
 
     setState(() => _isSubmitting = false);
   }
 
+  Future<File> _crearImagenPorDefecto() async {
+    // Aquí podrías crear una imagen por defecto o usar un placeholder
+    // Por ahora retornamos un archivo temporal (deberías manejarlo mejor en producción)
+    return File('assets/images/vacante_default.jpg');
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final overlay = Overlay.of(context);
     final statusBarHeight = MediaQuery.of(context).padding.top;
+
+    // Colores amarillos/naranjas de empresa
+    final primaryColor = isDark 
+        ? temaOscuroBotonGradienteAmarilloInicio 
+        : temaClaroBotonGradienteAmarilloInicio;
+    final secondaryColor = isDark 
+        ? temaOscuroBotonGradienteAmarilloFin 
+        : temaClaroBotonGradienteAmarilloFin;
+    final onPrimaryColor = isDark 
+        ? temaOscuroBotonGradienteAmarilloContent 
+        : temaClaroBotonGradienteAmarilloContent;
 
     ref.listen<EmpresaVacanteState>(empresaVacanteProvider, (prev, next) {
       if (next is EmpresaVacanteCreada) {
@@ -169,6 +190,7 @@ class _EmpresaCrearVacanteScreenState
     });
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -184,18 +206,77 @@ class _EmpresaCrearVacanteScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Selector de imagen
-                      _buildImageSelector(colorScheme, textTheme),
+                      // Header con gradiente
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              primaryColor.withValues(alpha: 0.15),
+                              secondaryColor.withValues(alpha: 0.05),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: primaryColor, width: 2),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [primaryColor, secondaryColor],
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.work_outline,
+                                color: onPrimaryColor,
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Crear Nueva Vacante",
+                                    style: textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Completa la información para publicar tu oferta",
+                                    style: textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const SizedBox(height: 24),
 
+                      // Selector de imagen (OPCIONAL)
+                      _buildImageSelector(primaryColor, secondaryColor, textTheme),
+                      const SizedBox(height: 24),
+
+                      // Sección: Información Básica
+                      _buildSeccionHeader("Información Básica", primaryColor, textTheme),
+                      const SizedBox(height: 12),
+
                       // Título
-                      TextFormField(
+                      _buildTextField(
                         controller: _tituloController,
-                        decoration: const InputDecoration(
-                          labelText: "Título de la vacante *",
-                          hintText: "Ej: Desarrollador Frontend",
-                          border: OutlineInputBorder(),
-                        ),
+                        label: "Título de la vacante",
+                        hint: "Ej: Desarrollador Frontend",
+                        icon: Icons.title,
+                        primaryColor: primaryColor,
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "Campo requerido";
@@ -206,14 +287,13 @@ class _EmpresaCrearVacanteScreenState
                       const SizedBox(height: 16),
 
                       // Descripción
-                      TextFormField(
+                      _buildTextField(
                         controller: _descripcionController,
+                        label: "Descripción",
+                        hint: "Describe las responsabilidades y requisitos...",
+                        icon: Icons.description,
+                        primaryColor: primaryColor,
                         maxLines: 4,
-                        decoration: const InputDecoration(
-                          labelText: "Descripción *",
-                          hintText: "Describe la vacante...",
-                          border: OutlineInputBorder(),
-                        ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
                             return "Campo requerido";
@@ -221,20 +301,23 @@ class _EmpresaCrearVacanteScreenState
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
+
+                      // Sección: Compensación
+                      _buildSeccionHeader("Compensación", primaryColor, textTheme),
+                      const SizedBox(height: 12),
 
                       // Salario mínimo y máximo
                       Row(
                         children: [
                           Expanded(
-                            child: TextFormField(
+                            child: _buildTextField(
                               controller: _minSalarioController,
+                              label: "Salario mínimo",
+                              hint: "3000000",
+                              icon: Icons.attach_money,
+                              primaryColor: primaryColor,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: "Salario mínimo *",
-                                hintText: "3000000",
-                                border: OutlineInputBorder(),
-                              ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return "Requerido";
@@ -245,14 +328,13 @@ class _EmpresaCrearVacanteScreenState
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: TextFormField(
+                            child: _buildTextField(
                               controller: _maxSalarioController,
+                              label: "Salario máximo",
+                              hint: "5000000",
+                              icon: Icons.attach_money,
+                              primaryColor: primaryColor,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: "Salario máximo *",
-                                hintText: "5000000",
-                                border: OutlineInputBorder(),
-                              ),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return "Requerido";
@@ -263,15 +345,18 @@ class _EmpresaCrearVacanteScreenState
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 24),
+
+                      // Sección: Detalles del Puesto
+                      _buildSeccionHeader("Detalles del Puesto", primaryColor, textTheme),
+                      const SizedBox(height: 12),
 
                       // Ubicación
-                      DropdownButtonFormField<int>(
+                      _buildDropdown<int>(
                         value: _ubicacionId,
-                        decoration: const InputDecoration(
-                          labelText: "Ubicación *",
-                          border: OutlineInputBorder(),
-                        ),
+                        label: "Ubicación",
+                        icon: Icons.location_on,
+                        primaryColor: primaryColor,
                         items: _ubicaciones.map((ubicacion) {
                           return DropdownMenuItem<int>(
                             value: ubicacion['id'] as int,
@@ -289,12 +374,11 @@ class _EmpresaCrearVacanteScreenState
                       const SizedBox(height: 16),
 
                       // Jornada
-                      DropdownButtonFormField<int>(
+                      _buildDropdown<int>(
                         value: _jornadaId,
-                        decoration: const InputDecoration(
-                          labelText: "Jornada *",
-                          border: OutlineInputBorder(),
-                        ),
+                        label: "Jornada",
+                        icon: Icons.schedule,
+                        primaryColor: primaryColor,
                         items: _jornadas.map((jornada) {
                           return DropdownMenuItem<int>(
                             value: jornada['id'] as int,
@@ -312,12 +396,11 @@ class _EmpresaCrearVacanteScreenState
                       const SizedBox(height: 16),
 
                       // Modalidad
-                      DropdownButtonFormField<int>(
+                      _buildDropdown<int>(
                         value: _modalidadId,
-                        decoration: const InputDecoration(
-                          labelText: "Modalidad *",
-                          border: OutlineInputBorder(),
-                        ),
+                        label: "Modalidad",
+                        icon: Icons.work,
+                        primaryColor: primaryColor,
                         items: _modalidades.map((modalidad) {
                           return DropdownMenuItem<int>(
                             value: modalidad['id'] as int,
@@ -335,12 +418,11 @@ class _EmpresaCrearVacanteScreenState
                       const SizedBox(height: 16),
 
                       // Tipo de contrato
-                      DropdownButtonFormField<int>(
+                      _buildDropdown<int>(
                         value: _tipoContratoId,
-                        decoration: const InputDecoration(
-                          labelText: "Tipo de contrato *",
-                          border: OutlineInputBorder(),
-                        ),
+                        label: "Tipo de contrato",
+                        icon: Icons.assignment,
+                        primaryColor: primaryColor,
                         items: _tiposContrato.map((tipo) {
                           return DropdownMenuItem<int>(
                             value: tipo['id'] as int,
@@ -355,42 +437,76 @@ class _EmpresaCrearVacanteScreenState
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
-
-                      // Palabras clave
-                      TextFormField(
-                        controller: _palabrasClaveController,
-                        decoration: const InputDecoration(
-                          labelText: "Palabras clave",
-                          hintText: "React, TypeScript, Frontend (separadas por comas)",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
                       const SizedBox(height: 24),
 
-                      // Botón de crear
-                      SizedBox(
+                      // Sección: Habilidades
+                      _buildSeccionHeader("Habilidades Requeridas", primaryColor, textTheme),
+                      const SizedBox(height: 12),
+
+                      // Palabras clave
+                      _buildTextField(
+                        controller: _palabrasClaveController,
+                        label: "Palabras clave (opcional)",
+                        hint: "React, TypeScript, Frontend (separadas por comas)",
+                        icon: Icons.label,
+                        primaryColor: primaryColor,
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 32),
+
+                      // Botón de crear con gradiente
+                      Container(
                         width: double.infinity,
-                        height: 50,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [primaryColor, secondaryColor],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: primaryColor.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: ElevatedButton(
                           onPressed: _isSubmitting ? null : _submit,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: colorScheme.primary,
-                            foregroundColor: colorScheme.onPrimary,
-                            disabledBackgroundColor: colorScheme.surfaceVariant,
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           child: _isSubmitting
-                              ? const SizedBox(
+                              ? SizedBox(
                                   height: 24,
                                   width: 24,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: onPrimaryColor,
                                   ),
                                 )
-                              : const Text("Crear Vacante"),
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_circle_outline, color: onPrimaryColor),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Crear Vacante",
+                                      style: TextStyle(
+                                        color: onPrimaryColor,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                         ),
                       ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -402,63 +518,241 @@ class _EmpresaCrearVacanteScreenState
     );
   }
 
-  Widget _buildImageSelector(ColorScheme colorScheme, TextTheme textTheme) {
-    return GestureDetector(
-      onTap: _seleccionarImagen,
-      child: Container(
-        width: double.infinity,
-        height: 200,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceVariant,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: colorScheme.outline,
-            width: 2,
+  Widget _buildSeccionHeader(String titulo, Color primaryColor, TextTheme textTheme) {
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 24,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [primaryColor, primaryColor.withValues(alpha: 0.5)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
-        child: _imagenSeleccionada == null
-            ? Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.add_photo_alternate_outlined,
-                    size: 64,
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Toca para agregar imagen",
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              )
-            : Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.file(
-                      _imagenSeleccionada!,
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: CircleAvatar(
-                      backgroundColor: Colors.black54,
-                      child: IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.white),
-                        onPressed: _seleccionarImagen,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+        const SizedBox(width: 12),
+        Text(
+          titulo,
+          style: textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: primaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required IconData icon,
+    required Color primaryColor,
+    int maxLines = 1,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor, width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
+        filled: true,
+        fillColor: primaryColor.withValues(alpha: 0.05),
       ),
+      validator: validator,
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required T? value,
+    required String label,
+    required IconData icon,
+    required Color primaryColor,
+    required List<DropdownMenuItem<T>> items,
+    required void Function(T?) onChanged,
+    String? Function(T?)? validator,
+  }) {
+    return DropdownButtonFormField<T>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: primaryColor),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: primaryColor, width: 2),
+        ),
+        filled: true,
+        fillColor: primaryColor.withValues(alpha: 0.05),
+      ),
+      items: items,
+      onChanged: onChanged,
+      validator: validator,
+    );
+  }
+
+  Widget _buildImageSelector(Color primaryColor, Color secondaryColor, TextTheme textTheme) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.image, color: primaryColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              "Imagen de la vacante",
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: primaryColor,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: primaryColor),
+              ),
+              child: Text(
+                "Opcional",
+                style: textTheme.bodySmall?.copyWith(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: _seleccionarImagen,
+          child: Container(
+            width: double.infinity,
+            height: 200,
+            decoration: BoxDecoration(
+              gradient: _imagenSeleccionada == null
+                  ? LinearGradient(
+                      colors: [
+                        primaryColor.withValues(alpha: 0.1),
+                        secondaryColor.withValues(alpha: 0.05),
+                      ],
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: primaryColor,
+                width: 2,
+                style: _imagenSeleccionada == null ? BorderStyle.solid : BorderStyle.none,
+              ),
+            ),
+            child: _imagenSeleccionada == null
+                ? Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [primaryColor, secondaryColor],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add_photo_alternate_outlined,
+                          size: 40,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        "Toca para agregar imagen",
+                        style: textTheme.bodyLarge?.copyWith(
+                          color: primaryColor,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Imagen opcional - Se usará un placeholder si no la agregas",
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  )
+                : Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          _imagenSeleccionada!,
+                          width: double.infinity,
+                          height: 200,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: Colors.black87,
+                              child: IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                                onPressed: _seleccionarImagen,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            CircleAvatar(
+                              backgroundColor: Colors.red,
+                              child: IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.white, size: 20),
+                                onPressed: _eliminarImagen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }
