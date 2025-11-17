@@ -11,14 +11,15 @@ class EmpresaVacantesScreen extends ConsumerStatefulWidget {
   const EmpresaVacantesScreen({super.key});
 
   @override
-  ConsumerState<EmpresaVacantesScreen> createState() => _EmpresaVacantesScreenState();
+  ConsumerState<EmpresaVacantesScreen> createState() =>
+      _EmpresaVacantesScreenState();
 }
 
-class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
+class _EmpresaVacantesScreenState
+    extends ConsumerState<EmpresaVacantesScreen> {
   @override
   void initState() {
     super.initState();
-    // Cargar vacantes al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(empresaVacanteProvider.notifier).cargarVacantes();
     });
@@ -49,7 +50,8 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: colorScheme.error),
+                  Icon(Icons.error_outline,
+                      size: 64, color: colorScheme.error),
                   const SizedBox(height: 16),
                   Text(
                     "Error al cargar vacantes",
@@ -69,7 +71,9 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
                     onPressed: () {
-                      ref.read(empresaVacanteProvider.notifier).cargarVacantes();
+                      ref
+                          .read(empresaVacanteProvider.notifier)
+                          .cargarVacantes();
                     },
                     icon: const Icon(Icons.refresh),
                     label: const Text("Reintentar"),
@@ -86,7 +90,9 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
             ? _buildEmptyState(context, colorScheme, textTheme)
             : RefreshIndicator(
                 onRefresh: () async {
-                  await ref.read(empresaVacanteProvider.notifier).cargarVacantes();
+                  await ref
+                      .read(empresaVacanteProvider.notifier)
+                      .cargarVacantes();
                 },
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),
@@ -98,13 +104,14 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
                       imagenUrl: vacante.imagenUrl,
                       estado: vacante.estado,
                       empresa: vacante.empresa,
-                      salario: "${vacante.minSalario} - ${vacante.maxSalario}",
+                      salario:
+                          "${vacante.minSalario} - ${vacante.maxSalario}",
                       ubicacion: vacante.ubicacion,
                       modalidad: vacante.modalidad,
                       onTap: () {
-                        // TODO: Navegar a detalle de vacante
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Ver: ${vacante.titulo}")),
+                        context.push(
+                          '/empresa/vacante/${vacante.id}',
+                          extra: vacante,
                         );
                       },
                     );
@@ -147,7 +154,7 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
               icon: Icons.work_outline,
               label: "Vacantes",
               isActive: true,
-              onTap: () {}, // Ya estamos aquí
+              onTap: () {},
             ),
             _buildNavButton(
               context: context,
@@ -177,7 +184,7 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
     required VoidCallback onTap,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -267,10 +274,8 @@ class _EmpresaVacantesScreenState extends ConsumerState<EmpresaVacantesScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: colorScheme.primary,
                 foregroundColor: colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -318,7 +323,6 @@ class _VacanteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen
             AspectRatio(
               aspectRatio: 16 / 9,
               child: CachedNetworkImage(
@@ -330,18 +334,16 @@ class _VacanteCard extends StatelessWidget {
                 ),
                 errorWidget: (context, url, error) => Container(
                   color: colorScheme.surfaceVariant,
-                  child: const Icon(Icons.image_not_supported, size: 48),
+                  child:
+                      const Icon(Icons.image_not_supported, size: 48),
                 ),
               ),
             ),
-            
-            // Contenido
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Título
                   Text(
                     titulo,
                     style: textTheme.titleLarge?.copyWith(
@@ -351,8 +353,6 @@ class _VacanteCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  
-                  // Empresa
                   Text(
                     empresa,
                     style: textTheme.bodyMedium?.copyWith(
@@ -361,8 +361,6 @@ class _VacanteCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  
-                  // Salario
                   Text(
                     salario,
                     style: textTheme.bodyMedium?.copyWith(
@@ -371,11 +369,8 @@ class _VacanteCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
-                  // Estado, ubicación y modalidad
                   Row(
                     children: [
-                      // Estado
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
@@ -383,8 +378,10 @@ class _VacanteCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: estado == "Abierta"
-                              ? colorScheme.primary.withValues(alpha: 0.1)
-                              : colorScheme.error.withValues(alpha: 0.1),
+                              ? colorScheme.primary
+                                  .withValues(alpha: 0.1)
+                              : colorScheme.error
+                                  .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: estado == "Abierta"
@@ -403,8 +400,6 @@ class _VacanteCard extends StatelessWidget {
                         ),
                       ),
                       const Spacer(),
-                      
-                      // Ubicación y modalidad
                       Icon(
                         Icons.location_on_outlined,
                         size: 16,
@@ -419,8 +414,8 @@ class _VacanteCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Icon(
-                        modalidad == "Remoto" 
-                            ? Icons.home_work_outlined 
+                        modalidad == "Remoto"
+                            ? Icons.home_work_outlined
                             : Icons.business_outlined,
                         size: 16,
                         color: colorScheme.onSurfaceVariant,

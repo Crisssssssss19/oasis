@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oasis/core/di/providers.dart';
 import 'package:oasis/domain/model/pin_peticion.dart';
+import 'package:oasis/domain/model/vacante_respuesta.dart';
 import 'package:oasis/presentation/acceso/acceso_screen.dart';
 import 'package:oasis/presentation/aspirante/explorar_screen.dart';
 import 'package:oasis/presentation/aspirante/inicio_screen.dart';
@@ -14,6 +15,7 @@ import 'package:oasis/presentation/aspirante/registro/paso2/registro_paso2_scree
 import 'package:oasis/presentation/bienvenida/bienvenida_screen.dart';
 import 'package:oasis/presentation/animacion/animacion_screen.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_crear_vacante_screen.dart';
+import 'package:oasis/presentation/empresa/vacante/empresa_vacante_detalle_screen.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacantes_screen.dart';
 import 'package:oasis/presentation/registro/registro_inicio_screen.dart';
 import 'package:oasis/presentation/aspirante/chat/chat_test_screen.dart';
@@ -211,6 +213,18 @@ final appRouter = GoRouter(
         key: state.pageKey,
         child: const EmpresaCrearVacanteScreen(),
       ),
+    ),
+
+    GoRoute(
+      path: '/empresa/vacante/:id',
+      name: 'empresa_vacante_detalle',
+      pageBuilder: (context, state) {
+        final vacante = state.extra as VacanteRespuesta;
+        return NoTransitionPage(
+          key: state.pageKey,
+          child: EmpresaVacanteDetalleScreen(vacante: vacante),
+        );
+      },
     ),
   ],
 );
