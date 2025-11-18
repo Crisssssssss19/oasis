@@ -108,16 +108,24 @@ class _EmpresaCrearVacanteScreenState
       return;
     }
 
+    if (_imagenSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Debes seleccionar una imagen para la vacante"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
+    // Convertir lista de palabras clave a JSON string que espera el backend
     final palabrasClave = _palabrasClaveController.text
         .split(',')
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty)
         .toList();
-
-    // Si no hay imagen seleccionada, crear un archivo vacío o usar una por defecto
-    final imagenArchivo = _imagenSeleccionada ?? await _crearImagenPorDefecto();
 
     await ref.read(empresaVacanteProvider.notifier).crearVacante(
           titulo: _tituloController.text,
@@ -129,16 +137,10 @@ class _EmpresaCrearVacanteScreenState
           modalidadId: _modalidadId!,
           tipoContratoId: _tipoContratoId!,
           palabrasClave: palabrasClave,
-          imagenArchivo: imagenArchivo,
+          imagenArchivo: _imagenSeleccionada!,
         );
 
     setState(() => _isSubmitting = false);
-  }
-
-  Future<File> _crearImagenPorDefecto() async {
-    // Aquí podrías crear una imagen por defecto o usar un placeholder
-    // Por ahora retornamos un archivo temporal (deberías manejarlo mejor en producción)
-    return File('assets/images/vacante_default.jpg');
   }
 
   @override
@@ -262,7 +264,7 @@ class _EmpresaCrearVacanteScreenState
                       ),
                       const SizedBox(height: 24),
 
-                      // Selector de imagen (OPCIONAL)
+                      // Selector de imagen (OBLIGATORIO)
                       _buildImageSelector(primaryColor, secondaryColor, textTheme),
                       const SizedBox(height: 24),
 
@@ -642,15 +644,15 @@ class _EmpresaCrearVacanteScreenState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: primaryColor.withValues(alpha: 0.1),
+                color: primaryColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: primaryColor),
+                border: Border.all(color: primaryColor, width: 2),
               ),
               child: Text(
-                "Opcional",
+                "Requerida",
                 style: textTheme.bodySmall?.copyWith(
                   color: primaryColor,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
@@ -706,9 +708,10 @@ class _EmpresaCrearVacanteScreenState
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        "Imagen opcional - Se usará un placeholder si no la agregas",
+                        "Imagen requerida para crear la vacante",
                         style: textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
+                          color: primaryColor,
+                          fontWeight: FontWeight.w600,
                         ),
                         textAlign: TextAlign.center,
                       ),

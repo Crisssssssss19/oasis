@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:oasis/data/remote/dto/api_respuesta.dart';
 import 'package:oasis/data/remote/dto/vacante_datos_dto.dart';
@@ -42,25 +43,44 @@ class VacanteEmpresaRepositorioImpl implements VacanteEmpresaRepositorio {
     required File archivo,
   }) async {
     try {
+      print('📦 [REPO] Preparando datos para crear vacante');
+      
+      // Por ahora, asumimos IDs fijos para las palabras clave
+      // En producción, deberías obtener estos IDs del backend primero
+      // basándote en las palabras clave ingresadas
+      final List<int> idsPalabrasClave = List.generate(
+        palabrasClave.length,
+        (index) => index + 1, // IDs temporales
+      );
+      
+      // Convertir a JSON string como espera el backend
+      final idsPalabrasClaveTexto = jsonEncode(idsPalabrasClave);
+      
+      print('📦 [REPO] palabrasClave: $palabrasClave');
+      print('📦 [REPO] idsPalabrasClaveTexto: $idsPalabrasClaveTexto');
+
       final ApiRespuesta<VacanteDatosDto> response = await api.crearVacante(
         tituloVacante: titulo,
-        descripcionVacante: descripcion,
+        detalleVacante: descripcion,
         minSalarioVacante: minSalario,
         maxSalarioVacante: maxSalario,
         idUbicacion: ubicacionId,
         idJornada: jornadaId,
         idModalidad: modalidadId,
         idTipoContrato: tipoContratoId,
-        palabrasClave: palabrasClave.join(','),
+        idsPalabrasClaveTexto: idsPalabrasClaveTexto,
         archivo: archivo,
       );
 
+      print('✅ [REPO] Respuesta procesada');
       return _procesarRespuestaUnica(response);
     } on DioException catch (e) {
+      print('❌ [REPO] DioException: ${e.message}');
       throw Exception(
         "Error HTTP ${e.response?.statusCode ?? ''}: ${e.message}",
       );
     } catch (e) {
+      print('❌ [REPO] Exception: $e');
       throw Exception("Error inesperado: $e");
     }
   }
