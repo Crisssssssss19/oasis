@@ -22,6 +22,7 @@ class EmpresaVacanteNotifier extends StateNotifier<EmpresaVacanteState> {
   }
 
   /// Crea una nueva vacante con imagen
+  /// ✅ CAMBIO: Ahora recibe palabrasClaveIds en lugar de palabrasClave
   Future<void> crearVacante({
     required String titulo,
     required String descripcion,
@@ -31,7 +32,7 @@ class EmpresaVacanteNotifier extends StateNotifier<EmpresaVacanteState> {
     required int jornadaId,
     required int modalidadId,
     required int tipoContratoId,
-    required List<String> palabrasClave,
+    required List<int> palabrasClaveIds, // ✅ CAMBIO: Recibir IDs
     required dynamic imagenArchivo,
     int? empresaIdOverride,
     int? usuarioIdOverride,
@@ -62,7 +63,7 @@ class EmpresaVacanteNotifier extends StateNotifier<EmpresaVacanteState> {
         jornadaId: jornadaId,
         modalidadId: modalidadId,
         tipoContratoId: tipoContratoId,
-        palabrasClave: palabrasClave,
+        palabrasClaveIds: palabrasClaveIds, // ✅ CAMBIO: Pasar IDs
         archivo: imagenArchivo,
         fechaInicio: fechaInicio,
         fechaFin: fechaFin,

@@ -3,15 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:oasis/domain/model/palabra_clave.dart';
 import 'package:oasis/core/services/json_loader_service.dart';
 
+/// Widget para seleccionar múltiples palabras clave
+/// ✅ Trabaja con IDs internamente, pero muestra nombres al usuario
 class PalabraClaveMultiSelect extends StatefulWidget {
-  final List<String> palabrasSeleccionadas;
-  final void Function(List<String>) onChanged;
+  final List<int> idsSeleccionados; // ✅ CAMBIO: Ahora recibe IDs
+  final void Function(List<int>) onChanged; // ✅ CAMBIO: Ahora devuelve IDs
   final Color primaryColor;
   final Color onPrimaryColor;
 
   const PalabraClaveMultiSelect({
     super.key,
-    required this.palabrasSeleccionadas,
+    required this.idsSeleccionados,
     required this.onChanged,
     required this.primaryColor,
     required this.onPrimaryColor,
@@ -51,14 +53,14 @@ class _PalabraClaveMultiSelectState extends State<PalabraClaveMultiSelect> {
   }
 
   void _agregarPalabra(PalabraClave palabra) {
-    if (!widget.palabrasSeleccionadas.contains(palabra.nombre)) {
-      widget.onChanged([...widget.palabrasSeleccionadas, palabra.nombre]);
+    if (!widget.idsSeleccionados.contains(palabra.id)) { // ✅ CAMBIO: Comparar por ID
+      widget.onChanged([...widget.idsSeleccionados, palabra.id]); // ✅ CAMBIO: Agregar ID
     }
   }
 
-  void _eliminarPalabra(String palabra) {
+  void _eliminarPalabra(int palabraId) { // ✅ CAMBIO: Recibir ID
     widget.onChanged(
-      widget.palabrasSeleccionadas.where((p) => p != palabra).toList(),
+      widget.idsSeleccionados.where((id) => id != palabraId).toList(), // ✅ CAMBIO: Filtrar por ID
     );
   }
 
@@ -120,7 +122,7 @@ class _PalabraClaveMultiSelectState extends State<PalabraClaveMultiSelect> {
                             itemCount: _palabrasFiltradas.length,
                             itemBuilder: (context, index) {
                               final palabra = _palabrasFiltradas[index];
-                              final yaSeleccionada = widget.palabrasSeleccionadas.contains(palabra.nombre);
+                              final yaSeleccionada = widget.idsSeleccionados.contains(palabra.id); // ✅ CAMBIO: Comparar por ID
                               return ListTile(
                                 leading: Icon(
                                   yaSeleccionada ? Icons.check_circle : Icons.circle_outlined,
@@ -187,16 +189,22 @@ class _PalabraClaveMultiSelectState extends State<PalabraClaveMultiSelect> {
             child: Center(child: CircularProgressIndicator()),
           ),
 
-        // Lista de palabras seleccionadas
-        if (widget.palabrasSeleccionadas.isNotEmpty) ...[
+        // Lista de palabras seleccionadas (mostrar nombres)
+        if (widget.idsSeleccionados.isNotEmpty) ...[
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: widget.palabrasSeleccionadas.map((palabra) {
+            children: widget.idsSeleccionados.map((id) {
+              // ✅ CAMBIO: Buscar el nombre correspondiente al ID
+              final palabra = _palabrasClave.firstWhere(
+                (p) => p.id == id,
+                orElse: () => PalabraClave(id: id, nombre: 'ID: $id'),
+              );
+              
               return Chip(
                 label: Text(
-                  palabra,
+                  palabra.nombre, // ✅ CAMBIO: Mostrar nombre pero trabajar con ID
                   style: TextStyle(color: widget.onPrimaryColor),
                 ),
                 backgroundColor: widget.primaryColor,
@@ -205,7 +213,7 @@ class _PalabraClaveMultiSelectState extends State<PalabraClaveMultiSelect> {
                   size: 18,
                   color: widget.onPrimaryColor,
                 ),
-                onDeleted: () => _eliminarPalabra(palabra),
+                onDeleted: () => _eliminarPalabra(id), // ✅ CAMBIO: Eliminar por ID
               );
             }).toList(),
           ),

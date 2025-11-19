@@ -38,7 +38,7 @@ class VacanteEmpresaRepositorioImpl implements VacanteEmpresaRepositorio {
     required int jornadaId,
     required int modalidadId,
     required int tipoContratoId,
-    required List<String> palabrasClave,
+    required List<int> palabrasClaveIds, // ✅ CAMBIO: Recibir IDs
     required dynamic archivo,
     required String fechaInicio,
     required String fechaFin,
@@ -48,14 +48,11 @@ class VacanteEmpresaRepositorioImpl implements VacanteEmpresaRepositorio {
     try {
       print('📦 [REPO] Preparando datos para crear vacante');
 
-      // Convertir palabrasClave a IDs temporales (el backend espera un JSON)
-      final List<int> idsPalabrasClave = List.generate(
-        palabrasClave.length,
-        (index) => index + 1,
-      );
-      final idsPalabrasClaveTexto = jsonEncode(idsPalabrasClave);
+      // ✅ CAMBIO: Enviar IDs directamente como JSON
+      // El backend debe aceptar un array de IDs numéricos
+      final idsPalabrasClaveTexto = jsonEncode(palabrasClaveIds);
 
-      print('📦 [REPO] palabrasClave: $palabrasClave');
+      print('📦 [REPO] palabrasClaveIds: $palabrasClaveIds');
       print('📦 [REPO] idsPalabrasClaveTexto: $idsPalabrasClaveTexto');
 
       final ApiRespuesta<VacanteDatosDto> response = await api.crearVacante(
@@ -67,7 +64,7 @@ class VacanteEmpresaRepositorioImpl implements VacanteEmpresaRepositorio {
         idJornada: jornadaId,
         idModalidad: modalidadId,
         idTipoContrato: tipoContratoId,
-        idsPalabrasClaveTexto: idsPalabrasClaveTexto,
+        idsPalabrasClaveTexto: idsPalabrasClaveTexto, // ✅ CAMBIO: Enviar JSON con IDs
         fechaInicio: fechaInicio,
         fechaFin: fechaFin,
         idUsuario: idUsuario,

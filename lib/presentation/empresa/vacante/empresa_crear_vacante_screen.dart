@@ -12,7 +12,6 @@ import 'package:oasis/core/di/providers.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_state.dart';
 import 'package:oasis/presentation/empresa/widgets/ubicacion_searchable_dropdown.dart';
 import 'package:oasis/presentation/empresa/widgets/palabra_clave_multi_select.dart';
-import 'package:oasis/core/services/json_loader_service.dart'; // ✅ NUEVO IMPORT
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
@@ -46,7 +45,7 @@ class _EmpresaCrearVacanteScreenState
   int? _modalidadId;
   int? _tipoContratoId;
   
-  // ✅ CAMBIO: Ahora guardamos IDs de palabras clave, no nombres
+  // ✅ Guardamos IDs de palabras clave directamente
   List<int> _palabrasClaveIds = [];
 
   bool _isSubmitting = false;
@@ -70,19 +69,6 @@ class _EmpresaCrearVacanteScreenState
     {"id": 3, "nombre": "Por obra o labor"},
     {"id": 4, "nombre": "Prestación de servicios"},
   ];
-
-  // ✅ NUEVO: Método para obtener nombres desde IDs de palabras clave
-  Future<List<String>> _obtenerNombresDesdePalabraClaveIds() async {
-    // Importar el servicio
-    final jsonLoader = JsonLoaderService();
-    final todasPalabras = await jsonLoader.cargarPalabrasClave();
-    
-    // Filtrar y obtener nombres
-    return todasPalabras
-        .where((p) => _palabrasClaveIds.contains(p.id))
-        .map((p) => p.nombre)
-        .toList();
-  }
 
   @override
   void dispose() {
@@ -170,9 +156,9 @@ class _EmpresaCrearVacanteScreenState
 
     setState(() => _isSubmitting = true);
 
-    // ✅ CAMBIO: Convertir IDs a nombres para el backend
-    // El backend espera nombres, no IDs, así que hacemos la conversión
-    final palabrasClave = await _obtenerNombresDesdePalabraClaveIds();
+    // ✅ CAMBIO IMPORTANTE: Enviar IDs directamente, sin convertir a nombres
+    // El backend debe estar preparado para recibir un array de IDs numéricos
+    print('📦 [SCREEN] Enviando palabrasClaveIds: $_palabrasClaveIds');
 
     // Determinar empresaId a usar
     int? empresaIdOverride;
@@ -219,6 +205,7 @@ class _EmpresaCrearVacanteScreenState
     final fechaInicioTexto = fechaInicioDt.toUtc().toIso8601String();
     final fechaFinTexto = fechaFinDt.toUtc().toIso8601String();
 
+    // ✅ Llamar al notifier con IDs directamente
     await ref.read(empresaVacanteProvider.notifier).crearVacante(
       titulo: _tituloController.text,
       descripcion: _descripcionController.text,
@@ -228,7 +215,7 @@ class _EmpresaCrearVacanteScreenState
       jornadaId: _jornadaId!,
       modalidadId: _modalidadId!,
       tipoContratoId: _tipoContratoId!,
-      palabrasClave: palabrasClave,
+      palabrasClaveIds: _palabrasClaveIds, // ✅ CAMBIO: Enviar IDs directamente
       imagenArchivo: kIsWeb ? _imagenXFile! : _imagenSeleccionada!,
       empresaIdOverride: empresaIdOverride,
       usuarioIdOverride: usuarioIdOverride,
@@ -260,19 +247,92 @@ class _EmpresaCrearVacanteScreenState
 
     ref.listen<EmpresaVacanteState>(empresaVacanteProvider, (prev, next) {
       if (next is EmpresaVacanteCreada) {
-        showTopSnackBar(
-          overlay,
-          const CustomSnackBar.success(
-            message: "Vacante creada exitosamente",
-          ),
-          displayDuration: const Duration(seconds: 2),
-          padding: EdgeInsets.only(
-            top: statusBarHeight,
-            left: 16,
-            right: 16,
+        // ✅ Mostrar diálogo de éxito
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryColor, secondaryColor],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_outline,
+                    color: onPrimaryColor,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    "¡Éxito!",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Vacante creada exitosamente",
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  next.vacante.titulo,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              Container(
+                width: double.infinity,
+                height: 48,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [primaryColor, secondaryColor],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(); // Cerrar diálogo
+                    context.go('/empresa/vacantes'); // Ir al menú de vacantes
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    "Ver mis vacantes",
+                    style: TextStyle(
+                      color: onPrimaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         );
-        context.pop();
       } else if (next is EmpresaVacanteError) {
         showTopSnackBar(
           overlay,
@@ -596,11 +656,12 @@ class _EmpresaCrearVacanteScreenState
                       _buildSeccionHeader("Habilidades Requeridas", primaryColor, textTheme),
                       const SizedBox(height: 12),
 
-                      // ✅ SELECTOR MÚLTIPLE DE PALABRAS CLAVE (ahora usa IDs)
+                      // ✅ SELECTOR MÚLTIPLE DE PALABRAS CLAVE (usa IDs)
                       PalabraClaveMultiSelect(
                         idsSeleccionados: _palabrasClaveIds,
                         onChanged: (ids) {
                           setState(() => _palabrasClaveIds = ids);
+                          print('📦 [SCREEN] IDs seleccionados actualizados: $ids');
                         },
                         primaryColor: primaryColor,
                         onPrimaryColor: onPrimaryColor,
