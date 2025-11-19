@@ -10,6 +10,9 @@ import 'package:oasis/core/theme/colores_bienvenida.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_provider.dart';
 import 'package:oasis/core/di/providers.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_state.dart';
+import 'package:oasis/presentation/empresa/widgets/ubicacion_searchable_dropdown.dart';
+import 'package:oasis/presentation/empresa/widgets/palabra_clave_multi_select.dart';
+import 'package:oasis/core/services/json_loader_service.dart'; // ✅ NUEVO IMPORT
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
 
@@ -28,32 +31,27 @@ class _EmpresaCrearVacanteScreenState
   final _descripcionController = TextEditingController();
   final _minSalarioController = TextEditingController();
   final _maxSalarioController = TextEditingController();
-  final _palabrasClaveController = TextEditingController();
   final _empresaIdController = TextEditingController();
   final _usuarioIdController = TextEditingController();
+  
   DateTime? _fechaInicio;
   DateTime? _fechaFin;
 
   File? _imagenSeleccionada;
-  // En web usaremos XFile y bytes
   XFile? _imagenXFile;
   Uint8List? _imagenSeleccionadaBytes;
+  
   int? _ubicacionId;
   int? _jornadaId;
   int? _modalidadId;
   int? _tipoContratoId;
+  
+  // ✅ CAMBIO: Ahora guardamos IDs de palabras clave, no nombres
+  List<int> _palabrasClaveIds = [];
 
   bool _isSubmitting = false;
 
   // Listas de opciones (deberías obtenerlas del backend)
-  final List<Map<String, dynamic>> _ubicaciones = [
-    {"id": 200, "nombre": "Bogotá"},
-    {"id": 2, "nombre": "Medellín"},
-    {"id": 3, "nombre": "Cali"},
-    {"id": 4, "nombre": "Barranquilla"},
-    {"id": 5, "nombre": "Santa Marta"},
-  ];
-
   final List<Map<String, dynamic>> _jornadas = [
     {"id": 1, "nombre": "Tiempo completo"},
     {"id": 2, "nombre": "Medio tiempo"},
@@ -73,13 +71,25 @@ class _EmpresaCrearVacanteScreenState
     {"id": 4, "nombre": "Prestación de servicios"},
   ];
 
+  // ✅ NUEVO: Método para obtener nombres desde IDs de palabras clave
+  Future<List<String>> _obtenerNombresDesdePalabraClaveIds() async {
+    // Importar el servicio
+    final jsonLoader = JsonLoaderService();
+    final todasPalabras = await jsonLoader.cargarPalabrasClave();
+    
+    // Filtrar y obtener nombres
+    return todasPalabras
+        .where((p) => _palabrasClaveIds.contains(p.id))
+        .map((p) => p.nombre)
+        .toList();
+  }
+
   @override
   void dispose() {
     _tituloController.dispose();
     _descripcionController.dispose();
     _minSalarioController.dispose();
     _maxSalarioController.dispose();
-    _palabrasClaveController.dispose();
     _empresaIdController.dispose();
     _usuarioIdController.dispose();
     super.dispose();
@@ -160,14 +170,11 @@ class _EmpresaCrearVacanteScreenState
 
     setState(() => _isSubmitting = true);
 
-    // Convertir lista de palabras clave a JSON string que espera el backend
-    final palabrasClave = _palabrasClaveController.text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    // ✅ CAMBIO: Convertir IDs a nombres para el backend
+    // El backend espera nombres, no IDs, así que hacemos la conversión
+    final palabrasClave = await _obtenerNombresDesdePalabraClaveIds();
 
-    // Determinar empresaId a usar: si hay texto en el input, intentar parsearlo
+    // Determinar empresaId a usar
     int? empresaIdOverride;
     if (_empresaIdController.text.trim().isNotEmpty) {
       empresaIdOverride = int.tryParse(_empresaIdController.text.trim());
@@ -180,7 +187,7 @@ class _EmpresaCrearVacanteScreenState
       }
     }
 
-    // Determinar userId a usar: si hay texto en el input, intentar parsearlo
+    // Determinar userId a usar
     int? usuarioIdOverride;
     if (_usuarioIdController.text.trim().isNotEmpty) {
       usuarioIdOverride = int.tryParse(_usuarioIdController.text.trim());
@@ -193,42 +200,41 @@ class _EmpresaCrearVacanteScreenState
       }
     }
 
-        // Construir timestamps completos en ISO-8601 con hora por defecto
-        // Inicio: 09:00, Fin: 18:00 (hora local) y convertir a UTC para obtener OffsetDateTime
-        final fechaInicioDt = DateTime(
-          _fechaInicio!.year,
-          _fechaInicio!.month,
-          _fechaInicio!.day,
-          9,
-          0,
-        );
-        final fechaFinDt = DateTime(
-          _fechaFin!.year,
-          _fechaFin!.month,
-          _fechaFin!.day,
-          18,
-          0,
-        );
+    // Construir timestamps completos en ISO-8601
+    final fechaInicioDt = DateTime(
+      _fechaInicio!.year,
+      _fechaInicio!.month,
+      _fechaInicio!.day,
+      9,
+      0,
+    );
+    final fechaFinDt = DateTime(
+      _fechaFin!.year,
+      _fechaFin!.month,
+      _fechaFin!.day,
+      18,
+      0,
+    );
 
-        final fechaInicioTexto = fechaInicioDt.toUtc().toIso8601String();
-        final fechaFinTexto = fechaFinDt.toUtc().toIso8601String();
+    final fechaInicioTexto = fechaInicioDt.toUtc().toIso8601String();
+    final fechaFinTexto = fechaFinDt.toUtc().toIso8601String();
 
-        await ref.read(empresaVacanteProvider.notifier).crearVacante(
-          titulo: _tituloController.text,
-          descripcion: _descripcionController.text,
-          minSalario: _minSalarioController.text,
-          maxSalario: _maxSalarioController.text,
-          ubicacionId: _ubicacionId!,
-          jornadaId: _jornadaId!,
-          modalidadId: _modalidadId!,
-          tipoContratoId: _tipoContratoId!,
-          palabrasClave: palabrasClave,
-          imagenArchivo: kIsWeb ? _imagenXFile! : _imagenSeleccionada!,
-          empresaIdOverride: empresaIdOverride,
-          usuarioIdOverride: usuarioIdOverride,
-          fechaInicio: fechaInicioTexto,
-          fechaFin: fechaFinTexto,
-        );
+    await ref.read(empresaVacanteProvider.notifier).crearVacante(
+      titulo: _tituloController.text,
+      descripcion: _descripcionController.text,
+      minSalario: _minSalarioController.text,
+      maxSalario: _maxSalarioController.text,
+      ubicacionId: _ubicacionId!,
+      jornadaId: _jornadaId!,
+      modalidadId: _modalidadId!,
+      tipoContratoId: _tipoContratoId!,
+      palabrasClave: palabrasClave,
+      imagenArchivo: kIsWeb ? _imagenXFile! : _imagenSeleccionada!,
+      empresaIdOverride: empresaIdOverride,
+      usuarioIdOverride: usuarioIdOverride,
+      fechaInicio: fechaInicioTexto,
+      fechaFin: fechaFinTexto,
+    );
 
     setState(() => _isSubmitting = false);
   }
@@ -354,10 +360,9 @@ class _EmpresaCrearVacanteScreenState
                       ),
                       const SizedBox(height: 24),
 
-                      // Si la sesión no tiene empresaId, permitir al admin ingresar uno
+                      // Inputs para empresaId y userId (solo si no están en sesión)
                       Builder(builder: (context) {
                         final session = ref.read(sessionProvider);
-                        // Mostrar inputs para empresaId y userId si la sesión no los tiene
                         if (session.empresaId == null || session.userId == null) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -459,8 +464,6 @@ class _EmpresaCrearVacanteScreenState
                       ),
                       const SizedBox(height: 16),
 
-                      const SizedBox(height: 12),
-
                       // Sección: Compensación
                       _buildSeccionHeader("Compensación", primaryColor, textTheme),
                       const SizedBox(height: 12),
@@ -509,21 +512,13 @@ class _EmpresaCrearVacanteScreenState
                       _buildSeccionHeader("Detalles del Puesto", primaryColor, textTheme),
                       const SizedBox(height: 12),
 
-                      // Ubicación
-                      _buildDropdown<int>(
-                        value: _ubicacionId,
-                        label: "Ubicación",
-                        icon: Icons.location_on,
-                        primaryColor: primaryColor,
-                        items: _ubicaciones.map((ubicacion) {
-                          return DropdownMenuItem<int>(
-                            value: ubicacion['id'] as int,
-                            child: Text(ubicacion['nombre'] as String),
-                          );
-                        }).toList(),
+                      // ✅ UBICACIÓN CON BÚSQUEDA
+                      UbicacionSearchableDropdown(
+                        valorSeleccionado: _ubicacionId,
                         onChanged: (value) {
                           setState(() => _ubicacionId = value);
                         },
+                        primaryColor: primaryColor,
                         validator: (value) {
                           if (value == null) return "Selecciona una ubicación";
                           return null;
@@ -601,14 +596,14 @@ class _EmpresaCrearVacanteScreenState
                       _buildSeccionHeader("Habilidades Requeridas", primaryColor, textTheme),
                       const SizedBox(height: 12),
 
-                      // Palabras clave
-                      _buildTextField(
-                        controller: _palabrasClaveController,
-                        label: "Palabras clave (opcional)",
-                        hint: "React, TypeScript, Frontend (separadas por comas)",
-                        icon: Icons.label,
+                      // ✅ SELECTOR MÚLTIPLE DE PALABRAS CLAVE (ahora usa IDs)
+                      PalabraClaveMultiSelect(
+                        idsSeleccionados: _palabrasClaveIds,
+                        onChanged: (ids) {
+                          setState(() => _palabrasClaveIds = ids);
+                        },
                         primaryColor: primaryColor,
-                        maxLines: 2,
+                        onPrimaryColor: onPrimaryColor,
                       ),
                       const SizedBox(height: 32),
 
@@ -744,48 +739,48 @@ class _EmpresaCrearVacanteScreenState
     );
   }
 
-    Widget _buildDatePickerField({
-      required String label,
-      DateTime? selectedDate,
-      required Color primaryColor,
-      required void Function(DateTime) onPick,
-    }) {
-      return GestureDetector(
-        onTap: () async {
-          final now = DateTime.now();
-          final picked = await showDatePicker(
-            context: context,
-            initialDate: selectedDate ?? now,
-            firstDate: DateTime(now.year - 5),
-            lastDate: DateTime(now.year + 5),
-          );
-          if (picked != null) onPick(picked);
-        },
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: label,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
-            filled: true,
-            fillColor: primaryColor.withValues(alpha: 0.05),
+  Widget _buildDatePickerField({
+    required String label,
+    DateTime? selectedDate,
+    required Color primaryColor,
+    required void Function(DateTime) onPick,
+  }) {
+    return GestureDetector(
+      onTap: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: selectedDate ?? now,
+          firstDate: DateTime(now.year - 5),
+          lastDate: DateTime(now.year + 5),
+        );
+        if (picked != null) onPick(picked);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
           ),
-          child: Text(
-            selectedDate != null ? selectedDate.toIso8601String().split('T').first : 'Seleccionar fecha',
-            style: TextStyle(color: primaryColor),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
           ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: primaryColor, width: 2),
+          ),
+          filled: true,
+          fillColor: primaryColor.withValues(alpha: 0.05),
         ),
-      );
-    }
+        child: Text(
+          selectedDate != null ? selectedDate.toIso8601String().split('T').first : 'Seleccionar fecha',
+          style: TextStyle(color: primaryColor),
+        ),
+      ),
+    );
+  }
 
   Widget _buildDropdown<T>({
     required T? value,
@@ -823,7 +818,6 @@ class _EmpresaCrearVacanteScreenState
   }
 
   Widget _buildImageSelector(Color primaryColor, Color secondaryColor, TextTheme textTheme) {
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
