@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:oasis/domain/model/vacante_respuesta.dart';
 
 abstract class VacanteEmpresaRepositorio {
@@ -16,6 +15,10 @@ abstract class VacanteEmpresaRepositorio {
     required int modalidadId,
     required int tipoContratoId,
     required List<String> palabrasClave,
-    required File archivo,
+    required dynamic archivo,
+    required String fechaInicio,
+    required String fechaFin,
+    int? idUsuario,
+    int? idEmpresa,
   });
 }

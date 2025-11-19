@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:oasis/core/ui/barra_superior.dart';
 import 'package:oasis/core/theme/colores_bienvenida.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_provider.dart';
+import 'package:oasis/core/di/providers.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_state.dart';
 import 'package:top_snackbar_flutter/custom_snack_bar.dart';
 import 'package:top_snackbar_flutter/top_snack_bar.dart';
@@ -26,8 +29,15 @@ class _EmpresaCrearVacanteScreenState
   final _minSalarioController = TextEditingController();
   final _maxSalarioController = TextEditingController();
   final _palabrasClaveController = TextEditingController();
+  final _empresaIdController = TextEditingController();
+  final _usuarioIdController = TextEditingController();
+  DateTime? _fechaInicio;
+  DateTime? _fechaFin;
 
   File? _imagenSeleccionada;
+  // En web usaremos XFile y bytes
+  XFile? _imagenXFile;
+  Uint8List? _imagenSeleccionadaBytes;
   int? _ubicacionId;
   int? _jornadaId;
   int? _modalidadId;
@@ -37,7 +47,7 @@ class _EmpresaCrearVacanteScreenState
 
   // Listas de opciones (deberías obtenerlas del backend)
   final List<Map<String, dynamic>> _ubicaciones = [
-    {"id": 1, "nombre": "Bogotá"},
+    {"id": 200, "nombre": "Bogotá"},
     {"id": 2, "nombre": "Medellín"},
     {"id": 3, "nombre": "Cali"},
     {"id": 4, "nombre": "Barranquilla"},
@@ -70,6 +80,8 @@ class _EmpresaCrearVacanteScreenState
     _minSalarioController.dispose();
     _maxSalarioController.dispose();
     _palabrasClaveController.dispose();
+    _empresaIdController.dispose();
+    _usuarioIdController.dispose();
     super.dispose();
   }
 
@@ -83,15 +95,28 @@ class _EmpresaCrearVacanteScreenState
     );
 
     if (image != null) {
-      setState(() {
-        _imagenSeleccionada = File(image.path);
-      });
+      if (kIsWeb) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _imagenXFile = image;
+          _imagenSeleccionadaBytes = bytes;
+          _imagenSeleccionada = null;
+        });
+      } else {
+        setState(() {
+          _imagenSeleccionada = File(image.path);
+          _imagenXFile = image;
+          _imagenSeleccionadaBytes = null;
+        });
+      }
     }
   }
 
   void _eliminarImagen() {
     setState(() {
       _imagenSeleccionada = null;
+      _imagenXFile = null;
+      _imagenSeleccionadaBytes = null;
     });
   }
 
@@ -108,12 +133,27 @@ class _EmpresaCrearVacanteScreenState
       return;
     }
 
-    if (_imagenSeleccionada == null) {
+    if (_imagenSeleccionada == null && _imagenXFile == null && _imagenSeleccionadaBytes == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Debes seleccionar una imagen para la vacante"),
           backgroundColor: Colors.red,
         ),
+      );
+      return;
+    }
+
+    // Validar fechas
+    if (_fechaInicio == null || _fechaFin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Selecciona fecha de inicio y fin de la vacante")),
+      );
+      return;
+    }
+
+    if (_fechaInicio!.isAfter(_fechaFin!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("La fecha de inicio no puede ser posterior a la fecha fin")),
       );
       return;
     }
@@ -127,7 +167,53 @@ class _EmpresaCrearVacanteScreenState
         .where((e) => e.isNotEmpty)
         .toList();
 
-    await ref.read(empresaVacanteProvider.notifier).crearVacante(
+    // Determinar empresaId a usar: si hay texto en el input, intentar parsearlo
+    int? empresaIdOverride;
+    if (_empresaIdController.text.trim().isNotEmpty) {
+      empresaIdOverride = int.tryParse(_empresaIdController.text.trim());
+      if (empresaIdOverride == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Empresa ID inválido")),
+        );
+        setState(() => _isSubmitting = false);
+        return;
+      }
+    }
+
+    // Determinar userId a usar: si hay texto en el input, intentar parsearlo
+    int? usuarioIdOverride;
+    if (_usuarioIdController.text.trim().isNotEmpty) {
+      usuarioIdOverride = int.tryParse(_usuarioIdController.text.trim());
+      if (usuarioIdOverride == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Usuario ID inválido")),
+        );
+        setState(() => _isSubmitting = false);
+        return;
+      }
+    }
+
+        // Construir timestamps completos en ISO-8601 con hora por defecto
+        // Inicio: 09:00, Fin: 18:00 (hora local) y convertir a UTC para obtener OffsetDateTime
+        final fechaInicioDt = DateTime(
+          _fechaInicio!.year,
+          _fechaInicio!.month,
+          _fechaInicio!.day,
+          9,
+          0,
+        );
+        final fechaFinDt = DateTime(
+          _fechaFin!.year,
+          _fechaFin!.month,
+          _fechaFin!.day,
+          18,
+          0,
+        );
+
+        final fechaInicioTexto = fechaInicioDt.toUtc().toIso8601String();
+        final fechaFinTexto = fechaFinDt.toUtc().toIso8601String();
+
+        await ref.read(empresaVacanteProvider.notifier).crearVacante(
           titulo: _tituloController.text,
           descripcion: _descripcionController.text,
           minSalario: _minSalarioController.text,
@@ -137,7 +223,11 @@ class _EmpresaCrearVacanteScreenState
           modalidadId: _modalidadId!,
           tipoContratoId: _tipoContratoId!,
           palabrasClave: palabrasClave,
-          imagenArchivo: _imagenSeleccionada!,
+          imagenArchivo: kIsWeb ? _imagenXFile! : _imagenSeleccionada!,
+          empresaIdOverride: empresaIdOverride,
+          usuarioIdOverride: usuarioIdOverride,
+          fechaInicio: fechaInicioTexto,
+          fechaFin: fechaFinTexto,
         );
 
     setState(() => _isSubmitting = false);
@@ -264,6 +354,44 @@ class _EmpresaCrearVacanteScreenState
                       ),
                       const SizedBox(height: 24),
 
+                      // Si la sesión no tiene empresaId, permitir al admin ingresar uno
+                      Builder(builder: (context) {
+                        final session = ref.read(sessionProvider);
+                        // Mostrar inputs para empresaId y userId si la sesión no los tiene
+                        if (session.empresaId == null || session.userId == null) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (session.empresaId == null) ...[
+                                _buildTextField(
+                                  controller: _empresaIdController,
+                                  label: "Empresa ID (si no eres cuenta Empresa)",
+                                  hint: "Ingresa el ID de la empresa",
+                                  icon: Icons.domain,
+                                  primaryColor: primaryColor,
+                                  keyboardType: TextInputType.number,
+                                  validator: null,
+                                ),
+                                const SizedBox(height: 12),
+                              ],
+                              if (session.userId == null) ...[
+                                _buildTextField(
+                                  controller: _usuarioIdController,
+                                  label: "Usuario ID (si no está en token)",
+                                  hint: "Ingresa el ID numérico del usuario",
+                                  icon: Icons.person,
+                                  primaryColor: primaryColor,
+                                  keyboardType: TextInputType.number,
+                                  validator: null,
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      }),
+
                       // Selector de imagen (OBLIGATORIO)
                       _buildImageSelector(primaryColor, secondaryColor, textTheme),
                       const SizedBox(height: 24),
@@ -303,7 +431,35 @@ class _EmpresaCrearVacanteScreenState
                           return null;
                         },
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
+
+                      // Fechas de la vacante
+                      _buildSeccionHeader("Fechas", primaryColor, textTheme),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDatePickerField(
+                              label: 'Fecha inicio',
+                              selectedDate: _fechaInicio,
+                              primaryColor: primaryColor,
+                              onPick: (dt) => setState(() => _fechaInicio = dt),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildDatePickerField(
+                              label: 'Fecha fin',
+                              selectedDate: _fechaFin,
+                              primaryColor: primaryColor,
+                              onPick: (dt) => setState(() => _fechaFin = dt),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      const SizedBox(height: 12),
 
                       // Sección: Compensación
                       _buildSeccionHeader("Compensación", primaryColor, textTheme),
@@ -588,6 +744,49 @@ class _EmpresaCrearVacanteScreenState
     );
   }
 
+    Widget _buildDatePickerField({
+      required String label,
+      DateTime? selectedDate,
+      required Color primaryColor,
+      required void Function(DateTime) onPick,
+    }) {
+      return GestureDetector(
+        onTap: () async {
+          final now = DateTime.now();
+          final picked = await showDatePicker(
+            context: context,
+            initialDate: selectedDate ?? now,
+            firstDate: DateTime(now.year - 5),
+            lastDate: DateTime(now.year + 5),
+          );
+          if (picked != null) onPick(picked);
+        },
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: label,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryColor.withValues(alpha: 0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: primaryColor, width: 2),
+            ),
+            filled: true,
+            fillColor: primaryColor.withValues(alpha: 0.05),
+          ),
+          child: Text(
+            selectedDate != null ? selectedDate.toIso8601String().split('T').first : 'Seleccionar fecha',
+            style: TextStyle(color: primaryColor),
+          ),
+        ),
+      );
+    }
+
   Widget _buildDropdown<T>({
     required T? value,
     required String label,
@@ -624,7 +823,6 @@ class _EmpresaCrearVacanteScreenState
   }
 
   Widget _buildImageSelector(Color primaryColor, Color secondaryColor, TextTheme textTheme) {
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,7 +863,7 @@ class _EmpresaCrearVacanteScreenState
             width: double.infinity,
             height: 200,
             decoration: BoxDecoration(
-              gradient: _imagenSeleccionada == null
+              gradient: (_imagenSeleccionada == null && _imagenXFile == null && _imagenSeleccionadaBytes == null)
                   ? LinearGradient(
                       colors: [
                         primaryColor.withValues(alpha: 0.1),
@@ -677,10 +875,10 @@ class _EmpresaCrearVacanteScreenState
               border: Border.all(
                 color: primaryColor,
                 width: 2,
-                style: _imagenSeleccionada == null ? BorderStyle.solid : BorderStyle.none,
+                style: (_imagenSeleccionada == null && _imagenXFile == null && _imagenSeleccionadaBytes == null) ? BorderStyle.solid : BorderStyle.none,
               ),
             ),
-            child: _imagenSeleccionada == null
+            child: (_imagenSeleccionada == null && _imagenXFile == null && _imagenSeleccionadaBytes == null)
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -721,12 +919,21 @@ class _EmpresaCrearVacanteScreenState
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          _imagenSeleccionada!,
-                          width: double.infinity,
-                          height: 200,
-                          fit: BoxFit.cover,
-                        ),
+                        child: kIsWeb
+                            ? (_imagenSeleccionadaBytes != null
+                                ? Image.memory(
+                                    _imagenSeleccionadaBytes!,
+                                    width: double.infinity,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                  )
+                                : const SizedBox())
+                            : Image.file(
+                                _imagenSeleccionada!,
+                                width: double.infinity,
+                                height: 200,
+                                fit: BoxFit.cover,
+                              ),
                       ),
                       Positioned(
                         top: 8,

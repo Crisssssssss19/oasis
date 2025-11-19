@@ -62,13 +62,21 @@ final dioProvider = Provider<Dio>((ref) {
           (path) => options.path.contains(path),
         );
 
-        if (!isAuthEndpoint) {
-          // Agregar token de sesión a peticiones autenticadas
+        // DEBUG: indicar si la petición requiere autorización y si existe un token
+        try {
           final session = ref.read(sessionProvider);
-          final token = session.token;
-          if (token != null && token.isNotEmpty) {
-            options.headers["Authorization"] = "Bearer $token";
+          final tokenPresent = session.token != null && session.token!.isNotEmpty;
+          print('🔐 [HTTP] ${isAuthEndpoint ? 'auth-excluded' : 'auth-required'} ${options.path} - tokenPresent=$tokenPresent');
+
+          if (!isAuthEndpoint) {
+            // Agregar token de sesión a peticiones autenticadas
+            final token = session.token;
+            if (token != null && token.isNotEmpty) {
+              options.headers["Authorization"] = "Bearer $token";
+            }
           }
+        } catch (e) {
+          print('⚠️ [HTTP] Error al leer session para headers: $e');
         }
         return handler.next(options);
       },
@@ -192,11 +200,16 @@ final dioChatProvider = Provider<Dio>((ref) {
   dio.interceptors.add(
     InterceptorsWrapper(
       onRequest: (options, handler) {
-        // Obtener token de la sesión
-        final session = ref.read(sessionProvider);
-        final token = session.token;
-        if (token != null && token.isNotEmpty) {
-          options.headers["Authorization"] = "Bearer $token";
+        // DEBUG: mostrar si se está adjuntando token (sin imprimir el token)
+        try {
+          final session = ref.read(sessionProvider);
+          final tokenPresent = session.token != null && session.token!.isNotEmpty;
+          print('🔐 [CHAT HTTP] ${options.path} - tokenPresent=$tokenPresent');
+          if (tokenPresent) {
+            options.headers["Authorization"] = "Bearer ${session.token}";
+          }
+        } catch (e) {
+          print('⚠️ [CHAT HTTP] Error al leer session para headers: $e');
         }
         return handler.next(options);
       },

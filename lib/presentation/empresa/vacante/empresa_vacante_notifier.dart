@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:oasis/core/di/providers.dart';
 import 'package:oasis/presentation/empresa/vacante/empresa_vacante_state.dart';
@@ -33,12 +32,27 @@ class EmpresaVacanteNotifier extends StateNotifier<EmpresaVacanteState> {
     required int modalidadId,
     required int tipoContratoId,
     required List<String> palabrasClave,
-    required File imagenArchivo,
+    required dynamic imagenArchivo,
+    int? empresaIdOverride,
+    int? usuarioIdOverride,
+    required String fechaInicio,
+    required String fechaFin,
   }) async {
     state = const EmpresaVacanteCreando();
 
+    // Validación: la sesión debe pertenecer a una empresa (tener empresaId)
+    final session = ref.read(sessionProvider);
+    // Permitir override (admin eligiendo empresa). Si no hay override ni session, error.
+    final empresaIdFinal = empresaIdOverride ?? session.empresaId;
+    if (empresaIdFinal == null) {
+      state = const EmpresaVacanteError(
+          "Debes iniciar sesión con una cuenta de empresa o seleccionar una empresa para crear vacantes");
+      return;
+    }
+
     try {
       final useCase = ref.read(crearVacanteUseCaseProvider);
+      // Obtener ids desde la sesión (si están disponibles)
       final vacante = await useCase(
         titulo: titulo,
         descripcion: descripcion,
@@ -50,6 +64,10 @@ class EmpresaVacanteNotifier extends StateNotifier<EmpresaVacanteState> {
         tipoContratoId: tipoContratoId,
         palabrasClave: palabrasClave,
         archivo: imagenArchivo,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        idUsuario: usuarioIdOverride ?? session.userId,
+        idEmpresa: empresaIdFinal,
       );
       
       state = EmpresaVacanteCreada(vacante);

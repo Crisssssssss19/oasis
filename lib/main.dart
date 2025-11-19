@@ -20,6 +20,7 @@ Future<void> main() async {
   final expira = prefs.getInt("swallow_expira_en");
   final userId = prefs.getInt("swallow_user_id");
   final empresaId = prefs.getInt("swallow_empresa_id");
+  final roles = prefs.getStringList("roles");
 
   // Crear sesión inicial con todos los datos incluidos userId y empresaId
   final initialSession = AccesoSesion(
@@ -28,6 +29,7 @@ Future<void> main() async {
     expiraEn: expira,
     userId: userId,
     empresaId: empresaId,
+    roles: roles ?? [],
   );
 
   runApp(

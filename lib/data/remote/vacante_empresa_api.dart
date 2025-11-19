@@ -1,5 +1,7 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http_parser/http_parser.dart';
 import 'package:oasis/data/remote/dto/api_respuesta.dart';
 import 'package:oasis/data/remote/dto/vacante_datos_dto.dart';
 
@@ -58,29 +60,97 @@ class VacanteEmpresaApi {
     required int idModalidad,
     required int idTipoContrato,
     required String idsPalabrasClaveTexto, // JSON string con array de IDs
-    required File archivo,
+    required String fechaInicio,
+    required String fechaFin,
+    int? idUsuario,
+    int? idEmpresa,
+    required dynamic archivo,
   }) async {
     try {
       print('🔧 [API] Creando vacante con:');
       print('  - tituloVacante: $tituloVacante');
       print('  - idsPalabrasClaveTexto: $idsPalabrasClaveTexto');
-      print('  - archivo: ${archivo.path}');
+      print('  - archivo: ${archivo is XFile ? archivo.name : archivo.path}');
 
       // Crear MultipartFile dependiendo de la plataforma
       MultipartFile multipartFile;
-      try {
-        // Intenta usar fromFile (Android/iOS)
-        multipartFile = await MultipartFile.fromFile(
-          archivo.path,
-          filename: archivo.path.split('/').last,
-        );
-      } catch (e) {
-        // Fallback para Web: usar bytes
-        final bytes = await archivo.readAsBytes();
+      if (kIsWeb) {
+        // En web `archivo` suele ser XFile
+        Uint8List bytes;
+        String filename = 'upload.bin';
+        if (archivo is XFile) {
+          bytes = await archivo.readAsBytes();
+          filename = archivo.name;
+        } else {
+          try {
+            bytes = await archivo.readAsBytes();
+          } catch (e) {
+            throw Exception('No se pudo leer el archivo en web: $e');
+          }
+        }
+
+        // Inferir mime type por extensión simple
+        String ext = '';
+        final idx = filename.lastIndexOf('.');
+        if (idx != -1 && idx < filename.length - 1) ext = filename.substring(idx + 1).toLowerCase();
+        String mimeMain = 'application';
+        String mimeSub = 'octet-stream';
+        if (ext == 'jpg' || ext == 'jpeg') {
+          mimeMain = 'image';
+          mimeSub = 'jpeg';
+        } else if (ext == 'png') {
+          mimeMain = 'image';
+          mimeSub = 'png';
+        } else if (ext == 'gif') {
+          mimeMain = 'image';
+          mimeSub = 'gif';
+        } else if (ext == 'webp') {
+          mimeMain = 'image';
+          mimeSub = 'webp';
+        }
+
+        // Si no pudimos inferir por extensión, intentar por magic bytes (más fiable)
+        if (mimeMain == 'application' && mimeSub == 'octet-stream') {
+          if (bytes.length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xD8) {
+            mimeMain = 'image';
+            mimeSub = 'jpeg';
+            if (!filename.contains('.')) filename = '$filename.jpg';
+          } else if (bytes.length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47) {
+            mimeMain = 'image';
+            mimeSub = 'png';
+            if (!filename.contains('.')) filename = '$filename.png';
+          } else if (bytes.length >= 3 && bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46) {
+            mimeMain = 'image';
+            mimeSub = 'gif';
+            if (!filename.contains('.')) filename = '$filename.gif';
+          } else {
+            // Fallback conservador: intentar enviar como jpeg
+            mimeMain = 'image';
+            mimeSub = 'jpeg';
+            if (!filename.contains('.')) filename = '$filename.jpg';
+          }
+        }
+
         multipartFile = MultipartFile.fromBytes(
           bytes,
-          filename: archivo.path.split('/').last,
+          filename: filename,
+          contentType: MediaType(mimeMain, mimeSub),
         );
+      } else {
+        try {
+          // Intenta usar fromFile (Android/iOS)
+          multipartFile = await MultipartFile.fromFile(
+            archivo.path,
+            filename: archivo.path.split('/').last,
+          );
+        } catch (e) {
+          // Fallback para otros entornos: usar bytes
+          final bytes = await archivo.readAsBytes();
+          multipartFile = MultipartFile.fromBytes(
+            bytes,
+            filename: archivo.path.split('/').last,
+          );
+        }
       }
 
       // Crear FormData exactamente como lo espera el backend
@@ -94,6 +164,14 @@ class VacanteEmpresaApi {
         'idModalidad': idModalidad,
         'idTipoContrato': idTipoContrato,
         'idsPalabrasClaveTexto': idsPalabrasClaveTexto,
+        if (idUsuario != null) 'idUsuario': idUsuario,
+        if (idEmpresa != null) 'idEmpresa': idEmpresa,
+        // Fechas (incluir variantes por compatibilidad con backend)
+        'fechainicioVacante': fechaInicio,
+        'fechaInicioVacante': fechaInicio,
+        'fechaFinVacante': fechaFin,
+        // Estado por defecto (1 = activo)
+        'estadoVacante': 1,
         'archivo': multipartFile,
       });
 

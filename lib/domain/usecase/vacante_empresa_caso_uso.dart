@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:oasis/domain/model/vacante_respuesta.dart';
 import 'package:oasis/domain/repository/vacante_empresa_repository.dart';
 
@@ -29,7 +28,11 @@ class CrearVacanteCasoUso {
     required int modalidadId,
     required int tipoContratoId,
     required List<String> palabrasClave,
-    required File archivo,
+    required dynamic archivo,
+    required String fechaInicio,
+    required String fechaFin,
+    int? idUsuario,
+    int? idEmpresa,
   }) {
     return repository.crearVacante(
       titulo: titulo,
@@ -42,6 +45,10 @@ class CrearVacanteCasoUso {
       tipoContratoId: tipoContratoId,
       palabrasClave: palabrasClave,
       archivo: archivo,
+      fechaInicio: fechaInicio,
+      fechaFin: fechaFin,
+      idUsuario: idUsuario,
+      idEmpresa: idEmpresa,
     );
   }
 }

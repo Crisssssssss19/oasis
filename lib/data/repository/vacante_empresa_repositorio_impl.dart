@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:oasis/data/remote/dto/api_respuesta.dart';
@@ -40,22 +39,22 @@ class VacanteEmpresaRepositorioImpl implements VacanteEmpresaRepositorio {
     required int modalidadId,
     required int tipoContratoId,
     required List<String> palabrasClave,
-    required File archivo,
+    required dynamic archivo,
+    required String fechaInicio,
+    required String fechaFin,
+    int? idUsuario,
+    int? idEmpresa,
   }) async {
     try {
       print('📦 [REPO] Preparando datos para crear vacante');
-      
-      // Por ahora, asumimos IDs fijos para las palabras clave
-      // En producción, deberías obtener estos IDs del backend primero
-      // basándote en las palabras clave ingresadas
+
+      // Convertir palabrasClave a IDs temporales (el backend espera un JSON)
       final List<int> idsPalabrasClave = List.generate(
         palabrasClave.length,
-        (index) => index + 1, // IDs temporales
+        (index) => index + 1,
       );
-      
-      // Convertir a JSON string como espera el backend
       final idsPalabrasClaveTexto = jsonEncode(idsPalabrasClave);
-      
+
       print('📦 [REPO] palabrasClave: $palabrasClave');
       print('📦 [REPO] idsPalabrasClaveTexto: $idsPalabrasClaveTexto');
 
@@ -69,6 +68,10 @@ class VacanteEmpresaRepositorioImpl implements VacanteEmpresaRepositorio {
         idModalidad: modalidadId,
         idTipoContrato: tipoContratoId,
         idsPalabrasClaveTexto: idsPalabrasClaveTexto,
+        fechaInicio: fechaInicio,
+        fechaFin: fechaFin,
+        idUsuario: idUsuario,
+        idEmpresa: idEmpresa,
         archivo: archivo,
       );
 

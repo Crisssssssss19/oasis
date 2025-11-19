@@ -23,6 +23,7 @@ class SesionNotifier extends StateNotifier<AccesoSesion> {
       expiraEn: prefs.getInt(_expiraKey),
       userId: prefs.getInt(_userIdKey),
       empresaId: prefs.getInt(_empresaIdKey),
+      roles: prefs.getStringList(_rolesKey) ?? [],
     );
   }
 
